@@ -3,8 +3,10 @@ package main
 import (
   "fmt"
   "os"
+  "os/signal"
   "runtime"
   "container/list"
+  "time"
 )
 
 const (
@@ -19,7 +21,9 @@ const (
 type Server struct {
   // List of connected peers
   peers         *list.List
+  // Channel for shutting down the server
   shutdownChan  chan bool
+  // Database interface
   db            *Database
 }
 
@@ -40,15 +44,46 @@ func NewServer() (*Server, error) {
 
 // Main server loop
 func (s *Server) Start() {
-  for {
+  /*
+   * TEMP
+   */
 
+  peer, _ := NewPeer(s)
+  peer.Start()
+
+  for {
+    // Temp
+    time.Sleep( time.Second )
   }
+}
+
+func (s *Server) Stop() {
+  for e := s.peers.Front(); e != nil; e = e.Next() {
+    if peer, ok := e.Value.(Peer); ok {
+      peer.Stop()
+    }
+  }
+
+  // Close database
+  s.db.Close()
 
   s.shutdownChan <- true
 }
 
 func (s *Server) WaitForShutdown() {
   <- s.shutdownChan
+}
+
+func RegisterInterrupts(server *Server) {
+  c := make(chan os.Signal, 1)
+  signal.Notify(c, os.Interrupt)
+  go func() {
+    for sig := range c {
+      fmt.Printf("Shutting down (%v) ...\n", sig)
+
+      server.Stop()
+    }
+  }()
 }
 
 func main() {
@@ -60,7 +95,10 @@ func main() {
     os.Exit(1)
   }
 
-  server.Start()
+  // Register interrupt handlers for graceful shutdowns
+  RegisterInterrupts(server)
+
+  go server.Start()
 
   shutdownChan := make(chan bool)
   go func() {

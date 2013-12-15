@@ -6,7 +6,6 @@ import (
   "strconv"
   "github.com/syndtr/goleveldb/leveldb"
   "fmt"
-  "errors"
 )
 
 type Database struct {
@@ -15,12 +14,12 @@ type Database struct {
 
 func (db *Database) Bootstrap() error {
 
-  lastBlock, err := db.LastBlock();
-  if err != nil {
+  lastBlock := db.LastBlock();
+  if lastBlock == 0 {
     fmt.Println("No last block. Setting genesis")
     // If no last block is set, set it to the genesis block defined in server.go
     s := strconv.FormatUint(uint64(GenesisBlock), 10)
-    err = db.db.Put([]byte("lastBlock"), []byte(s), nil)
+    err := db.db.Put([]byte("lastBlock"), []byte(s), nil)
 
     if err != nil {
       return err
@@ -32,15 +31,19 @@ func (db *Database) Bootstrap() error {
   return nil
 }
 
-func (db *Database) LastBlock() (uint32, error) {
+func (db *Database) Close() {
+  defer db.db.Close()
+}
+
+func (db *Database) LastBlock() uint32 {
   data, _ := db.db.Get([]byte("lastBlock"), nil)
   if len(data) == 0 {
-    return 0, errors.New("Last block not set")
+    return 0
   }
 
   lastBlock, _ := strconv.ParseUint(string(data), 10, 32)
 
-  return uint32(lastBlock), nil
+  return uint32(lastBlock)
 }
 
 func NewDatabase() (*Database, error) {
