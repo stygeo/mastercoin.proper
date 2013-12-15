@@ -1,2 +1,2 @@
-mastercoind
-===========
+mastercoin
+==========
