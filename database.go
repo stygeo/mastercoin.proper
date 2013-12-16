@@ -3,7 +3,7 @@ package main
 import (
   "path"
   "os/user"
-  "strconv"
+  "encoding/binary"
   "github.com/syndtr/goleveldb/leveldb"
   "fmt"
 )
@@ -18,15 +18,18 @@ func (db *Database) Bootstrap() error {
   if lastBlock == 0 {
     fmt.Println("No last block. Setting genesis")
     // If no last block is set, set it to the genesis block defined in server.go
-    s := strconv.FormatUint(uint64(GenesisBlock), 10)
-    err := db.db.Put([]byte("lastBlock"), []byte(s), nil)
+
+    buf := make([]byte, 8) // 64 bit buffer
+    binary.PutUvarint(buf, uint64(GenesisBlock))
+
+    err := db.db.Put([]byte("lastBlock"), buf, nil)
 
     if err != nil {
-      return err
+      db.Close()
+
+      panic("Bootstrapping database failed. Unable to set lastBlock")
     }
   }
-
-  fmt.Println("Last block", lastBlock)
 
   return nil
 }
@@ -41,7 +44,7 @@ func (db *Database) LastBlock() uint32 {
     return 0
   }
 
-  lastBlock, _ := strconv.ParseUint(string(data), 10, 32)
+  lastBlock, _ := binary.Uvarint(data)
 
   return uint32(lastBlock)
 }
