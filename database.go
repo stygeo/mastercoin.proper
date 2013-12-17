@@ -50,6 +50,8 @@ func (db *Database) LastBlock() uint32 {
 }
 
 func NewDatabase() (*Database, error) {
+  // This will eventually have to be something like a resource folder.
+  // it works on my system for now. Probably won't work on Windows
   usr, _ := user.Current()
   dbPath := path.Join(usr.HomeDir, ".mastercoin", "database")
 
